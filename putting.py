@@ -4,10 +4,14 @@ from datetime import datetime
 import urllib.request
 import urllib.parse
 
+# 1. Page Configuration
 st.set_page_config(page_title="Golf Putting Tracker", page_icon="⛳", layout="centered")
 
+# 2. Header and Tableau Link
 st.title("⛳ Putting Stats Tracker")
+st.markdown("### 📊 [View My Tableau Dashboard](https://public.tableau.com/views/PhilPuttingPractice/Dashboard1?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)")
 st.write("Log your practice sessions directly into Google Sheets.")
+st.write("---")
 
 # --- CONFIGURATION (REPLACE WITH YOUR GOOGLE FORM DETAILS) ---
 FORM_ID = "1FAIpQLSeZ1tu5PrBhg0k79vqpop7Fd8G5Sey3Gxo-KP7pnKLHWiobkg"
@@ -17,13 +21,13 @@ ENTRY_ATTEMPTS = "entry.735277921"
 ENTRY_MADE = "entry.2033739861"
 ENTRY_PERCENTAGE = "entry.811923202"
 # --------------------------------------------------------------
-
-# Input Fields
+# 3. Input Fields
 drill = st.selectbox("Select Drill", ["6-Foot Gauge", "Ladder Drill", "Around the World", "Random Practice"])
 distance = st.number_input("Distance (Feet)", min_value=1, max_value=100, value=6)
 attempts = st.number_input("Balls Attempted", min_value=1, value=4)
 made = st.number_input("Balls Made", min_value=0, max_value=int(attempts), value=0)
 
+# 4. Submission Logic
 if st.button("Log Round to Cloud", use_container_width=True):
     percentage = (made / attempts) * 100
     
