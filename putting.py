@@ -1,60 +1,51 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from streamlit_gsheets import GSheetsConnection
+import urllib.request
+import urllib.parse
 
 st.set_page_config(page_title="Golf Putting Tracker", page_icon="⛳", layout="centered")
 
 st.title("⛳ Putting Stats Tracker")
-st.write("Log your practice sessions directly to Google Sheets.")
+st.write("Log your practice sessions directly into Google Sheets.")
 
-# PASTE YOUR GOOGLE SHEET URL HERE
-SQL_PUBLIC_URL = "https://docs.google.com/spreadsheets/d/1RysQbgIcLD2RDz_oaUdMx5tIJGR0X8UJe4a67X8yP68/edit?usp=sharing"
+# --- CONFIGURATION (REPLACE WITH YOUR GOOGLE FORM DETAILS) ---
+FORM_ID = "1FAIpQLSeZ1tu5PrBhg0k79vqpop7Fd8G5Sey3Gxo-KP7pnKLHWiobkg"
+ENTRY_DRILL = "entry.1609274925"       # Replace with your actual entry IDs
+ENTRY_DISTANCE = "entry.11254052"
+ENTRY_ATTEMPTS = "entry.735277921"
+ENTRY_MADE = "entry.2033739861"
+ENTRY_PERCENTAGE = "entry.811923202"
+# --------------------------------------------------------------
 
-# Establish the connection to your Google Sheet
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-# 1. Input Fields
+# Input Fields
 drill = st.selectbox("Select Drill", ["6-Foot Gauge", "Ladder Drill", "Around the World", "Random Practice"])
 distance = st.number_input("Distance (Feet)", min_value=1, max_value=100, value=6)
 attempts = st.number_input("Balls Attempted", min_value=1, value=4)
 made = st.number_input("Balls Made", min_value=0, max_value=int(attempts), value=0)
 
-# 2. Log Data Button
 if st.button("Log Round to Cloud", use_container_width=True):
     percentage = (made / attempts) * 100
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Create a dataframe for the new row
-    new_data = pd.DataFrame([{
-        "Timestamp": timestamp,
-        "Drill": drill,
-        "Distance_Ft": distance,
-        "Attempts": attempts,
-        "Made": made,
-        "Percentage": percentage
-    }])
+    # Formulate the payload to mirror a web form submission
+    form_url = f"https://docs.google.com/forms/d/e/{FORM_ID}/formResponse"
+    form_data = {
+        ENTRY_DRILL: drill,
+        ENTRY_DISTANCE: distance,
+        ENTRY_ATTEMPTS: attempts,
+        ENTRY_MADE: made,
+        ENTRY_PERCENTAGE: f"{percentage:.1f}"
+    }
     
     try:
-        # Read existing data safely
-        existing_data = conn.read(spreadsheet=SQL_PUBLIC_URL, ttl=0)
+        # Encode data and send via standard HTTP POST request
+        encoded_data = urllib.parse.urlencode(form_data).encode("utf-8")
+        request = urllib.request.Request(form_url, data=encoded_data)
         
-        # Combine old data with new row
-        updated_df = pd.concat([existing_data, new_data], ignore_index=True)
-        
-        # Update the Google Sheet
-        conn.update(spreadsheet=SQL_PUBLIC_URL, data=updated_df)
-        st.success(f"🚀 Sent to Google Sheets! Shot {percentage:.1f}% from {distance} feet.")
+        with urllib.request.urlopen(request) as response:
+            if response.status == 200:
+                st.success(f"🚀 Sent to Google Sheets! Shot {percentage:.1f}% from {distance} feet.")
+            else:
+                st.error("Form rejected the entry submission.")
     except Exception as e:
-        st.error(f"Error connecting to Google Sheets: {e}")
-
-# 3. View Recent History
-st.subheader("📋 Recent History (Live from Cloud)")
-try:
-    live_data = conn.read(spreadsheet=SQL_PUBLIC_URL, ttl=0)
-    if not live_data.empty:
-        st.dataframe(live_data.tail(5), use_container_width=True)
-    else:
-        st.info("No practice rounds logged yet.")
-except Exception as e:
-    st.warning("Could not load history preview.")
+        st.error(f"Error connecting to Google: {e}")
